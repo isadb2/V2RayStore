@@ -59,7 +59,7 @@ logger = logging.getLogger("trustvpn-bot")
 # =========================
 
 BOT_TOKEN = os.getenv("BOT_TOKEN", "8734599238:AAHGC_Y_vVRVO66U59LSRSfinD9qRseVHCs")
-DATABASE_URL = os.getenv("DATABASE_URL", "")
+DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://postgres:KlSJaIrPXGKCXRMgAIxwQQxqhjgPgCgT@postgres.railway.internal:5432/railway")
 PAYMENT_ADDRESS = os.getenv("PAYMENT_ADDRESS", "")
 PAYMENT_NETWORK = os.getenv("PAYMENT_NETWORK", "USDT-TRC20")
 PAYMENT_NOTES = os.getenv("PAYMENT_NOTES", "پس از پرداخت، هش تراکنش را ارسال کن.")
