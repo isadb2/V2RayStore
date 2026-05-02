@@ -1,6 +1,6 @@
 """
 ╔══════════════════════════════════════════════════╗
-║         V2RayStore VPN Bot - Single File Version     ║
+║         Excore VPN Bot - Single File Version     ║
 ║         Telegram VPN Sales Bot with Admin Panel  ║
 ╚══════════════════════════════════════════════════╝
 
@@ -597,7 +597,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
 
     text = (
-        f"{EMOJI_WELCOME} خوش آمدید به V2RayStore\n\n"
+        f"{EMOJI_WELCOME} خوش آمدید به Excore\n\n"
         f"{EMOJI_BALANCE} موجودی: {balance:,} تومان\n"
         f"{EMOJI_SUBSCRIPTION} اشتراک‌های فعال: {active_count}\n\n"
         f"{EMOJI_QUICK_ACCESS} دسترسی سریع\n"
@@ -959,7 +959,7 @@ async def admin_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("❌ دسترسی ندارید.")
         return
     await update.message.reply_text(
-        f"{EMOJI_ADMIN} پنل مدیریت V2RayStore",
+        f"{EMOJI_ADMIN} پنل مدیریت Excore",
         reply_markup=admin_menu_keyboard()
     )
 
@@ -1256,7 +1256,7 @@ async def admin_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # ───── بازگشت ادمین ─────
     elif data == "admin_back":
         await query.edit_message_text(
-            f"{EMOJI_ADMIN} پنل مدیریت V2RayStore",
+            f"{EMOJI_ADMIN} پنل مدیریت Excore",
             reply_markup=admin_menu_keyboard()
         )
 
