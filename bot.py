@@ -58,12 +58,12 @@ logger = logging.getLogger("trustvpn-bot")
 # CONFIG
 # =========================
 
-BOT_TOKEN = os.getenv("BOT_TOKEN", "")
+BOT_TOKEN = os.getenv("BOT_TOKEN", "8734599238:AAHGC_Y_vVRVO66U59LSRSfinD9qRseVHCs")
 DATABASE_URL = os.getenv("DATABASE_URL", "")
 PAYMENT_ADDRESS = os.getenv("PAYMENT_ADDRESS", "")
 PAYMENT_NETWORK = os.getenv("PAYMENT_NETWORK", "USDT-TRC20")
 PAYMENT_NOTES = os.getenv("PAYMENT_NOTES", "پس از پرداخت، هش تراکنش را ارسال کن.")
-ADMIN_IDS = [int(x.strip()) for x in os.getenv("ADMIN_IDS", "").split(",") if x.strip().isdigit()]
+ADMIN_IDS = [int(x.strip()) for x in os.getenv("ADMIN_IDS", "8105229274").split(",") if x.strip().isdigit()]
 SUPPORT_CHANNEL_ID = int(os.getenv("SUPPORT_CHANNEL_ID", "0")) if os.getenv("SUPPORT_CHANNEL_ID", "0").strip() else 0
 
 if not BOT_TOKEN:
