@@ -83,7 +83,7 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-BOT_TOKEN           = os.getenv("BOT_TOKEN", "8734599238:AAHGC_Y_vVRVO66U59LSRSfinD9qRseVHCs")
+BOT_TOKEN           = os.getenv("BOT_TOKEN", ""8734599238:AAHGC_Y_vVRVO66U59LSRSfinD9qRseVHCs)
 DATABASE_URL        = os.getenv("DATABASE_URL", "postgresql://postgres:KlSJaIrPXGKCXRMgAIxwQQxqhjgPgCgT@switchyard.proxy.rlwy.net:46401/railway")
 ADMIN_USERS_STR     = os.getenv("ADMIN_USERS", "8105229274")
 USDT_WALLET         = os.getenv("USDT_WALLET_ADDRESS", "YOUR_USDT_WALLET_ADDRESS")
@@ -1429,39 +1429,37 @@ def build_app() -> Application:
     return app
 
 
-async def main():
+def main():
     if not BOT_TOKEN:
         raise RuntimeError("BOT_TOKEN تنظیم نشده!")
     if not DATABASE_URL:
         raise RuntimeError("DATABASE_URL تنظیم نشده!")
 
-    await init_db()
+    # اجرای init_db قبل از شروع PTB event loop
+    import asyncio as _asyncio
+    _asyncio.run(init_db())
+
     app = build_app()
 
+    commands = [
+        BotCommand("start", "شروع و منوی اصلی"),
+        BotCommand("admin", "پنل مدیریت"),
+        BotCommand("cancel", "خروج از چت پشتیبانی"),
+    ]
+
     if WEBHOOK_URL:
-        # حالت Webhook (توصیه شده برای Railway)
         logger.info(f"🚀 حالت Webhook روی پورت {PORT}")
-        await app.bot.set_my_commands([
-            BotCommand("start", "شروع و منوی اصلی"),
-            BotCommand("admin", "پنل مدیریت"),
-            BotCommand("cancel", "خروج از چت پشتیبانی"),
-        ])
-        await app.run_webhook(
+        app.run_webhook(
             listen="0.0.0.0",
             port=PORT,
             webhook_url=f"{WEBHOOK_URL.rstrip('/')}/webhook",
             url_path="/webhook",
+            drop_pending_updates=True,
         )
     else:
-        # حالت Polling (برای تست محلی)
         logger.info("🚀 حالت Polling")
-        await app.bot.set_my_commands([
-            BotCommand("start", "شروع و منوی اصلی"),
-            BotCommand("admin", "پنل مدیریت"),
-            BotCommand("cancel", "خروج از چت پشتیبانی"),
-        ])
-        await app.run_polling(drop_pending_updates=True)
+        app.run_polling(drop_pending_updates=True)
 
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    main()
