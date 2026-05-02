@@ -134,109 +134,87 @@ async def get_pool() -> asyncpg.Pool:
         _pool = await asyncpg.create_pool(DATABASE_URL, min_size=2, max_size=10)
     return _pool
 
+async def _run_ddl(dsn: str, sql: str):
+    """اجرای یک دستور DDL با کانکشن کاملاً مستقل"""
+    conn = await asyncpg.connect(dsn)
+    try:
+        await conn.execute(sql)
+    finally:
+        await conn.close()
+
+
 async def init_db():
+    dsn = DATABASE_URL
+    # جداول بدون foreign key اول ساخته می‌شوند
+    await _run_ddl(dsn,
+        "CREATE TABLE IF NOT EXISTS users ("
+        "user_id BIGINT PRIMARY KEY, username TEXT, first_name TEXT, "
+        "balance INTEGER DEFAULT 0, referrer_id BIGINT, "
+        "join_date TIMESTAMPTZ DEFAULT NOW(), "
+        "is_banned BOOLEAN DEFAULT FALSE, is_admin BOOLEAN DEFAULT FALSE)"
+    )
+    await _run_ddl(dsn,
+        "CREATE TABLE IF NOT EXISTS services ("
+        "id SERIAL PRIMARY KEY, name TEXT NOT NULL, days INTEGER NOT NULL, "
+        "user_limit INTEGER NOT NULL DEFAULT 1, volume_gb FLOAT NOT NULL DEFAULT 1, "
+        "price_toman INTEGER NOT NULL, description TEXT, is_active BOOLEAN DEFAULT TRUE)"
+    )
+    await _run_ddl(dsn,
+        "CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT)"
+    )
+    # جداول با foreign key بعد از parents ساخته می‌شوند
+    await _run_ddl(dsn,
+        "CREATE TABLE IF NOT EXISTS orders ("
+        "id SERIAL PRIMARY KEY, user_id BIGINT REFERENCES users(user_id), "
+        "service_id INTEGER REFERENCES services(id), "
+        "status TEXT DEFAULT 'pending', config_text TEXT, "
+        "created_at TIMESTAMPTZ DEFAULT NOW(), confirmed_at TIMESTAMPTZ, admin_id BIGINT)"
+    )
+    await _run_ddl(dsn,
+        "CREATE TABLE IF NOT EXISTS referrals ("
+        "id SERIAL PRIMARY KEY, referrer_id BIGINT REFERENCES users(user_id), "
+        "referred_user_id BIGINT REFERENCES users(user_id) UNIQUE, "
+        "reward_claimed BOOLEAN DEFAULT FALSE, created_at TIMESTAMPTZ DEFAULT NOW())"
+    )
+    await _run_ddl(dsn,
+        "CREATE TABLE IF NOT EXISTS wallet_transactions ("
+        "id SERIAL PRIMARY KEY, user_id BIGINT REFERENCES users(user_id), "
+        "amount INTEGER NOT NULL, type TEXT NOT NULL, "
+        "description TEXT, created_at TIMESTAMPTZ DEFAULT NOW())"
+    )
+    await _run_ddl(dsn,
+        "CREATE TABLE IF NOT EXISTS tickets ("
+        "id SERIAL PRIMARY KEY, user_id BIGINT REFERENCES users(user_id), "
+        "admin_id BIGINT, status TEXT DEFAULT 'open', created_at TIMESTAMPTZ DEFAULT NOW())"
+    )
+    await _run_ddl(dsn,
+        "CREATE TABLE IF NOT EXISTS ticket_messages ("
+        "id SERIAL PRIMARY KEY, ticket_id INTEGER REFERENCES tickets(id), "
+        "sender_id BIGINT, text TEXT, sent_at TIMESTAMPTZ DEFAULT NOW())"
+    )
+    # داده‌های اولیه
     pool = await get_pool()
     async with pool.acquire() as conn:
-        await conn.execute("""
-            CREATE TABLE IF NOT EXISTS users (
-                user_id      BIGINT PRIMARY KEY,
-                username     TEXT,
-                first_name   TEXT,
-                balance      INTEGER DEFAULT 0,
-                referrer_id  BIGINT,
-                join_date    TIMESTAMPTZ DEFAULT NOW(),
-                is_banned    BOOLEAN DEFAULT FALSE,
-                is_admin     BOOLEAN DEFAULT FALSE
-            );
-
-            CREATE TABLE IF NOT EXISTS services (
-                id          SERIAL PRIMARY KEY,
-                name        TEXT NOT NULL,
-                days        INTEGER NOT NULL,
-                user_limit  INTEGER NOT NULL DEFAULT 1,
-                volume_gb   FLOAT NOT NULL DEFAULT 1,
-                price_toman INTEGER NOT NULL,
-                description TEXT,
-                is_active   BOOLEAN DEFAULT TRUE
-            );
-
-            CREATE TABLE IF NOT EXISTS orders (
-                id           SERIAL PRIMARY KEY,
-                user_id      BIGINT REFERENCES users(user_id),
-                service_id   INTEGER REFERENCES services(id),
-                status       TEXT DEFAULT 'pending',
-                config_text  TEXT,
-                created_at   TIMESTAMPTZ DEFAULT NOW(),
-                confirmed_at TIMESTAMPTZ,
-                admin_id     BIGINT
-            );
-
-            CREATE TABLE IF NOT EXISTS referrals (
-                id              SERIAL PRIMARY KEY,
-                referrer_id     BIGINT REFERENCES users(user_id),
-                referred_user_id BIGINT REFERENCES users(user_id) UNIQUE,
-                reward_claimed  BOOLEAN DEFAULT FALSE,
-                created_at      TIMESTAMPTZ DEFAULT NOW()
-            );
-
-            CREATE TABLE IF NOT EXISTS wallet_transactions (
-                id          SERIAL PRIMARY KEY,
-                user_id     BIGINT REFERENCES users(user_id),
-                amount      INTEGER NOT NULL,
-                type        TEXT NOT NULL,
-                description TEXT,
-                created_at  TIMESTAMPTZ DEFAULT NOW()
-            );
-
-            CREATE TABLE IF NOT EXISTS tickets (
-                id         SERIAL PRIMARY KEY,
-                user_id    BIGINT REFERENCES users(user_id),
-                admin_id   BIGINT,
-                status     TEXT DEFAULT 'open',
-                created_at TIMESTAMPTZ DEFAULT NOW()
-            );
-
-            CREATE TABLE IF NOT EXISTS ticket_messages (
-                id        SERIAL PRIMARY KEY,
-                ticket_id INTEGER REFERENCES tickets(id),
-                sender_id BIGINT,
-                text      TEXT,
-                sent_at   TIMESTAMPTZ DEFAULT NOW()
-            );
-
-            CREATE TABLE IF NOT EXISTS settings (
-                key   TEXT PRIMARY KEY,
-                value TEXT
-            );
-        """)
-
-        # سرویس پیش‌فرض اگر وجود ندارد
         existing = await conn.fetchval("SELECT COUNT(*) FROM services")
         if existing == 0:
-            await conn.execute("""
-                INSERT INTO services (name, days, user_limit, volume_gb, price_toman, description, is_active)
-                VALUES ('7 روزه 1 گیگ', 7, 1, 1, 200000, 'فیلترشکن ایران مناسب کاربران ایران.', TRUE)
-            """)
-
-        # تنظیمات اولیه
-        await conn.execute("""
-            INSERT INTO settings (key, value) VALUES ('usdt_wallet', $1)
-            ON CONFLICT (key) DO NOTHING
-        """, USDT_WALLET)
-
-        # ادمین‌های اولیه از env
+            await conn.execute(
+                "INSERT INTO services (name, days, user_limit, volume_gb, price_toman, description, is_active) "
+                "VALUES ($1, $2, $3, $4, $5, $6, TRUE)",
+                '7 روزه 1 گیگ', 7, 1, 1.0, 200000, 'فیلترشکن ایران مناسب کاربران ایران.'
+            )
+        await conn.execute(
+            "INSERT INTO settings (key, value) VALUES ($1, $2) ON CONFLICT (key) DO NOTHING",
+            'usdt_wallet', USDT_WALLET
+        )
         for admin_id in ADMIN_IDS:
-            await conn.execute("""
-                INSERT INTO users (user_id, first_name, is_admin)
-                VALUES ($1, 'Admin', TRUE)
-                ON CONFLICT (user_id) DO UPDATE SET is_admin = TRUE
-            """, admin_id)
-
+            await conn.execute(
+                "INSERT INTO users (user_id, first_name, is_admin) VALUES ($1, 'Admin', TRUE) "
+                "ON CONFLICT (user_id) DO UPDATE SET is_admin = TRUE",
+                admin_id
+            )
     logger.info("✅ دیتابیس آماده شد")
 
-# ═══════════════════════════════════════════════════
-#  توابع کمکی دیتابیس
-# ═══════════════════════════════════════════════════
+
 async def upsert_user(user_id: int, username: str, first_name: str, referrer_id: Optional[int] = None):
     pool = await get_pool()
     async with pool.acquire() as conn:
