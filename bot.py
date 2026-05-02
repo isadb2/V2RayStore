@@ -83,7 +83,7 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-BOT_TOKEN           = os.getenv("BOT_TOKEN", ""8734599238:AAHGC_Y_vVRVO66U59LSRSfinD9qRseVHCs)
+BOT_TOKEN           = os.getenv("BOT_TOKEN", "8734599238:AAHGC_Y_vVRVO66U59LSRSfinD9qRseVHCs")
 DATABASE_URL        = os.getenv("DATABASE_URL", "postgresql://postgres:KlSJaIrPXGKCXRMgAIxwQQxqhjgPgCgT@switchyard.proxy.rlwy.net:46401/railway")
 ADMIN_USERS_STR     = os.getenv("ADMIN_USERS", "8105229274")
 USDT_WALLET         = os.getenv("USDT_WALLET_ADDRESS", "YOUR_USDT_WALLET_ADDRESS")
